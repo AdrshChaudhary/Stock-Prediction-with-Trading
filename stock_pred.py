@@ -120,7 +120,7 @@ fig = go.Figure()
 # Add total return trace
 fig.add_trace(go.Scatter(x=portfolio.index, y=portfolio.total_return(), mode='lines', name='Total Return'))
 
-# Add other metrics as needed, e.g., drawdown
+# Add drawdown trace
 fig.add_trace(go.Scatter(x=portfolio.index, y=portfolio.drawdown(), mode='lines', name='Drawdown'))
 
 # Update layout
