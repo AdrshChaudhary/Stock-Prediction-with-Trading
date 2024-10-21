@@ -113,14 +113,6 @@ st.subheader('Backtest Results')
 stats = portfolio.stats()
 st.write(stats)
 
-# Portfolio Plot using vectorbt
-st.subheader('Portfolio Performance')
-
-# Plot total portfolio value using the value() method
-fig = portfolio.value().plot()  # Use value() to get the total portfolio value over time
-
-# Display the Plotly figure in Streamlit
-st.plotly_chart(fig)  # Use Plotly for interactive plotting
 
 
 # Alpaca API credentials
