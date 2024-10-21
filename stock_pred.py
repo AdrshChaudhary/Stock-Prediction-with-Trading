@@ -97,12 +97,12 @@ plt.grid(True)
 st.pyplot(plt)
 
 # Create a signal to buy if the model predicts an increase
-signals = best_rf.predict(X) > X['Close'].values
+signals = best_rf.predict(X) > X['Close'].to_numpy()  # Convert to numpy array
 
 # Backtest with vectorbt
 try:
     portfolio = vbt.Portfolio.from_signals(
-        close=stock_data['Close'].values,
+        close=stock_data['Close'].to_numpy(),  # Ensure 1D array
         entries=signals,
         exits=~signals,
         freq='1D'
@@ -111,10 +111,17 @@ try:
     # Display backtest results
     st.subheader('Backtest Results')
     stats = portfolio.stats()
-    st.write("Total Return: {:.2f}%".format(stats['total_return'] * 100))
-    st.write("Sharpe Ratio: {:.2f}".format(stats['sharpe']))
-    st.write("Maximum Drawdown: {:.2f}%".format(stats['max_drawdown'] * 100))
-    st.write("Total Trades: {}".format(stats['total_trades']))
+    
+    # Check if the stats contain the keys before accessing
+    total_return = stats['total_return'] if 'total_return' in stats else None
+    sharpe_ratio = stats['sharpe'] if 'sharpe' in stats else None
+    max_drawdown = stats['max_drawdown'] if 'max_drawdown' in stats else None
+    total_trades = stats['total_trades'] if 'total_trades' in stats else None
+
+    st.write("Total Return: {:.2f}%".format(total_return * 100 if total_return is not None else 0))
+    st.write("Sharpe Ratio: {:.2f}".format(sharpe_ratio if sharpe_ratio is not None else 0))
+    st.write("Maximum Drawdown: {:.2f}%".format(max_drawdown * 100 if max_drawdown is not None else 0))
+    st.write("Total Trades: {}".format(total_trades if total_trades is not None else 0))
 
     # Portfolio Plot using vectorbt
     st.subheader('Portfolio Performance')
@@ -134,7 +141,7 @@ alpaca = REST(ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL, api_version='v
 # Define the trading function
 def trade(symbol, prediction, current_price):
     try:
-        if prediction > current_price:
+        if prediction > current_price.item():  # Ensure comparison with a scalar
             # Buy signal
             alpaca.submit_order(
                 symbol=symbol,
