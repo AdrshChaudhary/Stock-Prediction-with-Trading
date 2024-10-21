@@ -3,6 +3,7 @@ yfinance
 joblib
 numpy
 pandas
+vectorbt
 scikit-learn
 vectorbt
 matplotlib
