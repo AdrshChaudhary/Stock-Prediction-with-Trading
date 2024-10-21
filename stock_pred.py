@@ -12,7 +12,7 @@ from sklearn.metrics import mean_squared_error
 import vectorbt as vbt
 import matplotlib.pyplot as plt
 from alpaca_trade_api.rest import REST
-
+import plotly.graph_objects as go
 # Streamlit App Layout
 st.title('Stock Prediction and Trading App')
 
@@ -113,6 +113,31 @@ st.subheader('Backtest Results')
 stats = portfolio.stats()
 st.write(stats)
 
+# Prepare data for Plotly
+fig = go.Figure()
+
+# Total portfolio value
+total_value = portfolio.total_value()
+
+# Add total portfolio value trace
+fig.add_trace(go.Scatter(x=total_value.index, y=total_value, mode='lines', name='Total Portfolio Value'))
+
+# Add drawdown trace
+drawdown = portfolio.drawdown()
+fig.add_trace(go.Scatter(x=drawdown.index, y=drawdown, mode='lines', name='Drawdown'))
+
+# Update layout
+fig.update_layout(
+    title=f"{symbol} Portfolio Performance",
+    xaxis_title="Date",
+    yaxis_title="Value",
+    legend_title="Metrics"
+)
+
+# Show plot
+st.plotly_chart(fig)
+
+
 # Alpaca API credentials
 ALPACA_API_KEY = st.secrets["global"]["ALPACA_API_KEY"]
 ALPACA_SECRET_KEY = st.secrets["global"]["ALPACA_SECRET_KEY"]
@@ -124,7 +149,10 @@ alpaca = REST(ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL, api_version='v
 # Define the trading function
 def trade(symbol, prediction, current_price):
     try:
-        if prediction > current_price:
+        # Get the last predicted value
+        last_prediction_value = prediction.item()  # This extracts the scalar value from the Series
+        
+        if last_prediction_value > current_price:
             # Buy signal
             alpaca.submit_order(
                 symbol=symbol,
