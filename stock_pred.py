@@ -171,88 +171,141 @@ class TradingApp:
             st.error(f"Error plotting predictions: {str(e)}")
             return None
     
-    def run_backtest(self, data, signals):
-        """Run and display backtest results."""
+def run_backtest(self, data, signals):
+    """Run and display backtest results with improved error handling and calculations."""
+    try:
+        # Create a clean DataFrame with required data
+        backtest_df = pd.DataFrame({
+            'Close': data['Close'],
+            'Signal': signals
+        })
+        backtest_df = backtest_df.dropna()  # Remove any NaN values
+        
+        # Ensure signals are boolean
+        entry_signals = backtest_df['Signal'].astype(bool)
+        exit_signals = ~entry_signals  # Inverse of entry signals
+        
+        # Initialize portfolio with proper parameters
+        portfolio = vbt.Portfolio.from_signals(
+            close=backtest_df['Close'],
+            entries=entry_signals,
+            exits=exit_signals,
+            freq='1D',  # Explicitly set frequency
+            init_cash=10000,
+            fees=0.001,
+            sl_stop=0.15,  # Add stop loss at 15%
+            tp_stop=0.30   # Add take profit at 30%
+        )
+        
+        # Calculate metrics with safe error handling
+        metrics = {}
+        
+        # Total Return
         try:
-            # Ensure signals array matches data length
-            signals = signals[:len(data)]
+            final_value = portfolio.final_value()
+            init_cash = portfolio.init_cash
+            metrics['total_return'] = ((final_value - init_cash) / init_cash) * 100
+        except Exception as e:
+            st.warning(f"Could not calculate total return: {str(e)}")
+            metrics['total_return'] = 0.0
             
-            portfolio = vbt.Portfolio.from_signals(
-                close=data['Close'],
-                entries=signals,
-                exits=~signals,
-                freq='D',
-                init_cash=10000,
-                fees=0.001
+        # Sharpe Ratio
+        try:
+            metrics['sharpe_ratio'] = portfolio.sharpe_ratio(risk_free=0.02)
+        except Exception as e:
+            st.warning(f"Could not calculate Sharpe ratio: {str(e)}")
+            metrics['sharpe_ratio'] = 0.0
+            
+        # Max Drawdown
+        try:
+            metrics['max_drawdown'] = portfolio.max_drawdown() * 100
+        except Exception as e:
+            st.warning(f"Could not calculate max drawdown: {str(e)}")
+            metrics['max_drawdown'] = 0.0
+            
+        # Trade Statistics
+        try:
+            trades = portfolio.trades
+            metrics['total_trades'] = len(trades.records)
+            metrics['win_rate'] = (trades.win_rate * 100) if trades.win_rate is not None else 0.0
+        except Exception as e:
+            st.warning(f"Could not calculate trade statistics: {str(e)}")
+            metrics['total_trades'] = 0
+            metrics['win_rate'] = 0.0
+        
+        # Display metrics in columns
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            st.metric("Total Return", f"{metrics['total_return']:.2f}%")
+        with col2:
+            st.metric("Sharpe Ratio", f"{metrics['sharpe_ratio']:.2f}")
+        with col3:
+            st.metric("Max Drawdown", f"{metrics['max_drawdown']:.2f}%")
+        with col4:
+            st.metric("Total Trades", f"{metrics['total_trades']}")
+        with col5:
+            st.metric("Win Rate", f"{metrics['win_rate']:.1f}%")
+        
+        # Plot cumulative returns
+        try:
+            returns = portfolio.returns()
+            cumulative_returns = (returns + 1).cumprod() - 1
+            
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=cumulative_returns.index,
+                y=cumulative_returns.values * 100,  # Convert to percentage
+                mode='lines',
+                name='Portfolio Returns',
+                line=dict(color='blue', width=2)
+            ))
+            
+            # Add buy/sell markers
+            entry_points = backtest_df[entry_signals]['Close']
+            exit_points = backtest_df[exit_signals]['Close']
+            
+            fig.add_trace(go.Scatter(
+                x=entry_points.index,
+                y=[0] * len(entry_points),  # Plot at 0% level
+                mode='markers',
+                name='Buy Signals',
+                marker=dict(symbol='triangle-up', size=10, color='green')
+            ))
+            
+            fig.add_trace(go.Scatter(
+                x=exit_points.index,
+                y=[0] * len(exit_points),  # Plot at 0% level
+                mode='markers',
+                name='Sell Signals',
+                marker=dict(symbol='triangle-down', size=10, color='red')
+            ))
+            
+            fig.update_layout(
+                title='Portfolio Performance',
+                xaxis_title='Date',
+                yaxis_title='Cumulative Return (%)',
+                template='plotly_white',
+                showlegend=True,
+                hovermode='x unified'
             )
             
-            # Calculate metrics
-            try:
-                total_return = float((portfolio.final_value() - portfolio.init_cash) / portfolio.init_cash)
-            except:
-                total_return = 0.0
-                
-            try:
-                sharpe_ratio = float(portfolio.sharpe_ratio())
-            except:
-                sharpe_ratio = 0.0
-                
-            try:
-                max_drawdown = float(portfolio.max_drawdown())
-            except:
-                max_drawdown = 0.0
-                
-            try:
-                trades = portfolio.trades.records_readable
-                total_trades = len(trades) if trades is not None else 0
-            except:
-                total_trades = 0
+            st.plotly_chart(fig, use_container_width=True)
             
-            # Display metrics
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Total Return", f"{total_return*100:.2f}%")
-            with col2:
-                st.metric("Sharpe Ratio", f"{sharpe_ratio:.2f}")
-            with col3:
-                st.metric("Max Drawdown", f"{max_drawdown*100:.2f}%")
-            with col4:
-                st.metric("Total Trades", str(total_trades))
-            
-            # Plot cumulative returns
-            returns = portfolio.returns()
-            if returns is not None:
-                cumulative_returns = returns.cumsum()
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=cumulative_returns.index,
-                    y=cumulative_returns.values,
-                    mode='lines',
-                    name='Cumulative Returns',
-                    line=dict(color='blue', width=2)
-                ))
-                
-                fig.update_layout(
-                    title='Portfolio Cumulative Returns',
-                    xaxis_title='Date',
-                    yaxis_title='Cumulative Return',
-                    template='plotly_white',
-                    showlegend=True
-                )
-                
-                st.plotly_chart(fig)
-            
-            return portfolio
         except Exception as e:
-            st.error(f"Error in backtesting: {str(e)}")
-            return None
+            st.error(f"Error creating performance chart: {str(e)}")
+        
+        return portfolio
+        
+    except Exception as e:
+        st.error(f"Error in backtesting: {str(e)}")
+        return None
     
     def execute_trade(self, symbol, prediction, current_price):
         """Execute trade through Alpaca API."""
         try:
             alpaca = REST(
-                st.secrets["ALPACA_API_KEY"],
-                st.secrets["ALPACA_SECRET_KEY"],
+                st.secrets["global"]["ALPACA_API_KEY"],
+                st.secrets["global"]["ALPACA_SECRET_KEY"],
                 'https://paper-api.alpaca.markets'
             )
             
