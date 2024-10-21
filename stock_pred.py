@@ -74,19 +74,23 @@ class TradingApp:
                 value=1, 
                 min_value=1
             )
-    
-    @st.cache_data(ttl=3600)
-    def load_data(self, symbol, start_date, end_date):
-        """Load and cache stock data."""
+
+    @st.cache_data
+    def load_stock_data(symbol: str, start_date_str: str, end_date_str: str):
+        """Load and cache stock data using string dates."""
         try:
-            data = yf.download(symbol, start=start_date, end=end_date)
+            data = yf.download(symbol, start=start_date_str, end=end_date_str)
             if data.empty:
-                st.error(f"No data found for symbol {symbol}")
                 return None
             return data
         except Exception as e:
-            st.error(f"Error loading data: {e}")
             return None
+    
+    def load_data(self, symbol, start_date, end_date):
+        """Wrapper for loading data that handles date conversion."""
+        start_date_str = start_date.strftime('%Y-%m-%d')
+        end_date_str = end_date.strftime('%Y-%m-%d')
+        return self.load_stock_data(symbol, start_date_str, end_date_str)
     
     def train_model(self, X, y):
         """Train and optimize the Random Forest model."""
@@ -198,6 +202,7 @@ class TradingApp:
         # Load Data
         data = self.load_data(self.symbol, self.start_date, self.end_date)
         if data is None:
+            st.error(f"No data found for symbol {self.symbol}")
             return
         
         # Prepare features
