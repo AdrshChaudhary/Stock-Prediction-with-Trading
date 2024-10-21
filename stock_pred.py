@@ -12,7 +12,6 @@ from sklearn.metrics import mean_squared_error
 import vectorbt as vbt
 import matplotlib.pyplot as plt
 from alpaca_trade_api.rest import REST
-import plotly.graph_objects as go
 
 # Streamlit App Layout
 st.title('Stock Prediction and Trading App')
@@ -99,9 +98,7 @@ plt.grid(True)
 st.pyplot(plt)
 
 # Create a signal to buy if the model predicts an increase
-predicted_prices = best_rf.predict(X)
-signals = predicted_prices > X['Close'].values
-st.write("Predicted Prices vs Actual Prices:", list(zip(predicted_prices, X['Close'].values)))
+signals = best_rf.predict(X) > X['Close'].values
 
 # Backtest with vectorbt
 portfolio = vbt.Portfolio.from_signals(
@@ -116,35 +113,9 @@ st.subheader('Backtest Results')
 stats = portfolio.stats()
 st.write(stats)
 
-# Check for empty portfolio
-if portfolio.total_return().empty:
-    st.write("No trading actions were taken. Portfolio is empty.")
-else:
-    # Prepare data for Plotly
-    fig = go.Figure()
-
-    # Get total return and drawdown
-    total_return = portfolio.total_return()
-    drawdown = portfolio.drawdown()
-
-    # Add traces for total return and drawdown
-    fig.add_trace(go.Scatter(x=total_return.index, y=total_return.values, mode='lines', name='Total Return'))
-    fig.add_trace(go.Scatter(x=drawdown.index, y=drawdown.values, mode='lines', name='Drawdown'))
-
-    # Update layout
-    fig.update_layout(
-        title=f"{symbol} Portfolio Performance",
-        xaxis_title="Date",
-        yaxis_title="Value",
-        legend_title="Metrics"
-    )
-
-    # Show plot
-    st.plotly_chart(fig)
-
 # Alpaca API credentials
-ALPACA_API_KEY = st.secrets["global"]["ALPACA_API_KEY"]
-ALPACA_SECRET_KEY = st.secrets["global"]["ALPACA_SECRET_KEY"]
+ALPACA_API_KEY = st.secrets["ALPACA_API_KEY"]
+ALPACA_SECRET_KEY = st.secrets["ALPACA_SECRET_KEY"]
 ALPACA_BASE_URL = 'https://paper-api.alpaca.markets'
 
 # Initialize Alpaca REST API
