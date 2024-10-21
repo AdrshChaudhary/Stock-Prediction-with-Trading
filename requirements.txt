@@ -1,10 +1,10 @@
 streamlit
 yfinance
 joblib
-numpy
 pandas
-vectorbt
 scikit-learn
 vectorbt
 matplotlib
 alpaca-trade-api
+numpy
+vectorbt
