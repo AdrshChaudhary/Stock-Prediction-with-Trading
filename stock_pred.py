@@ -111,7 +111,7 @@ try:
     # Display backtest results
     st.subheader('Backtest Results')
     stats = portfolio.stats()
-    
+
     # Check if the stats contain the keys before accessing
     total_return = stats['total_return'] if 'total_return' in stats else None
     sharpe_ratio = stats['sharpe'] if 'sharpe' in stats else None
@@ -125,8 +125,7 @@ try:
 
     # Portfolio Plot using vectorbt
     st.subheader('Portfolio Performance')
-    fig = portfolio.total_return.plot()
-    st.plotly_chart(fig)
+    st.plotly_chart(portfolio.total_return.vbt.plot())  # Corrected plotting method
 except Exception as e:
     st.error(f"Error running backtest: {str(e)}")
 
