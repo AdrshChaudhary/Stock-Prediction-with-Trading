@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -94,21 +91,26 @@ class TradingApp:
     
     def train_model(self, X, y):
         """Train and optimize the Random Forest model."""
+        # Ensure X and y have the same number of samples
+        min_len = min(len(X), len(y))
+        X = X[:min_len]
+        y = y[:min_len]
+        
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.2, random_state=42
         )
         
         param_grid = {
-            'n_estimators': [100, 200, 300],
-            'max_depth': [10, 20, 30, None],
-            'min_samples_split': [2, 5, 10],
-            'min_samples_leaf': [1, 2, 4]
+            'n_estimators': [100, 200],
+            'max_depth': [10, 20],
+            'min_samples_split': [2, 5],
+            'min_samples_leaf': [1, 2]
         }
         
         with st.spinner('Training model... This may take a few minutes.'):
             rf = RandomForestRegressor(random_state=42)
             grid_search = GridSearchCV(
-                rf, param_grid, cv=5, 
+                rf, param_grid, cv=3, 
                 scoring='neg_mean_squared_error', n_jobs=-1
             )
             grid_search.fit(X_train, y_train)
@@ -117,18 +119,27 @@ class TradingApp:
     
     def plot_predictions(self, y_test, predictions):
         """Create an interactive plot of actual vs predicted prices."""
+        # Ensure we're working with numpy arrays
+        y_test_values = np.array(y_test)
+        predictions = np.array(predictions)
+        
+        # Create a date index for plotting
+        dates = pd.date_range(end=self.end_date, periods=len(y_test), freq='D')
+        
         fig = go.Figure()
         
         fig.add_trace(go.Scatter(
-            x=y_test.index, y=y_test.values,
-            mode='markers', name='Actual Prices',
-            marker=dict(color='blue', size=8)
+            x=dates, y=y_test_values,
+            mode='lines+markers', name='Actual Prices',
+            line=dict(color='blue', width=1),
+            marker=dict(color='blue', size=6)
         ))
         
         fig.add_trace(go.Scatter(
-            x=y_test.index, y=predictions,
-            mode='markers', name='Predicted Prices',
-            marker=dict(color='red', size=8)
+            x=dates, y=predictions,
+            mode='lines+markers', name='Predicted Prices',
+            line=dict(color='red', width=1),
+            marker=dict(color='red', size=6)
         ))
         
         fig.update_layout(
@@ -136,25 +147,28 @@ class TradingApp:
             xaxis_title='Date',
             yaxis_title='Price',
             template='plotly_white',
-            hovermode='x unified'
+            hovermode='x unified',
+            showlegend=True
         )
         
         return fig
     
     def run_backtest(self, data, signals):
         """Run and display backtest results."""
+        # Ensure signals array matches data length
+        signals = signals[:len(data)]
+        
         portfolio = vbt.Portfolio.from_signals(
             close=data['Close'],
             entries=signals,
             exits=~signals,
             freq='D',
             init_cash=10000,
-            fees=0.001  # 0.1% trading fee
+            fees=0.001
         )
         
         stats = portfolio.stats()
         
-        # Display metrics in columns
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Total Return", f"{stats['total_return']:.2%}")
@@ -178,12 +192,10 @@ class TradingApp:
             
             side = 'buy' if prediction > current_price else 'sell'
             
-            # Check if we have enough buying power or shares to sell
             account = alpaca.get_account()
             if side == 'buy' and float(account.buying_power) < current_price * self.trade_quantity:
                 return "Insufficient buying power"
             
-            # Submit the order
             order = alpaca.submit_order(
                 symbol=symbol,
                 qty=self.trade_quantity,
@@ -199,33 +211,26 @@ class TradingApp:
     
     def run(self):
         """Main application logic."""
-        # Load Data
         data = self.load_data(self.symbol, self.start_date, self.end_date)
         if data is None:
             st.error(f"No data found for symbol {self.symbol}")
             return
         
-        # Prepare features
         processed_data = self.predictor.prepare_features(data)
         processed_data.dropna(inplace=True)
         
-        if len(processed_data) < 200:  # Check if we have enough data
+        if len(processed_data) < 200:
             st.error("Not enough data for analysis. Please select a longer date range.")
             return
             
-        # Create feature matrix
-        X = processed_data[['Close', 'MA50', 'MA200', 'RSI', 'MACD', 'Volatility']]
-        y = processed_data['Close'].shift(-1)  # Predict next day's close
+        # Create feature matrix and target
+        X = processed_data[['Close', 'MA50', 'MA200', 'RSI', 'MACD', 'Volatility']].values
+        y = processed_data['Close'].shift(-1).values[:-1]  # Remove last row
+        X = X[:-1]  # Remove last row to match y length
         
-        # Remove the last row since we don't have the next day's price
-        X = X[:-1]
-        y = y[:-1]
-        
-        # Train model
+        # Train model and get predictions
         grid_search, X_test, y_test = self.train_model(X, y)
         best_model = grid_search.best_estimator_
-        
-        # Make predictions
         predictions = best_model.predict(X_test)
         
         # Display model performance
@@ -240,8 +245,8 @@ class TradingApp:
         st.plotly_chart(self.plot_predictions(y_test, predictions))
         
         # Run backtest
-        signals = best_model.predict(X) > X['Close'].values
-        portfolio = self.run_backtest(processed_data, signals)
+        signals = best_model.predict(X) > X[:, 0]  # Compare with closing prices
+        portfolio = self.run_backtest(processed_data[:-1], signals)
         
         # Plot portfolio performance
         st.subheader('Portfolio Performance')
@@ -250,9 +255,9 @@ class TradingApp:
         # Trading interface
         st.subheader("Live Trading")
         if st.button('Execute Trade'):
-            last_data = X.iloc[-1].values.reshape(1, -1)
+            last_data = X[-1].reshape(1, -1)
             last_prediction = best_model.predict(last_data)[0]
-            last_price = X.iloc[-1]['Close']
+            last_price = X[-1, 0]  # Close price
             
             result = self.execute_trade(self.symbol, last_prediction, last_price)
             st.write(result)
