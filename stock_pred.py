@@ -12,6 +12,7 @@ from sklearn.metrics import mean_squared_error
 import vectorbt as vbt
 import matplotlib.pyplot as plt
 from alpaca_trade_api.rest import REST
+import plotly.graph_objects as go
 
 # Streamlit App Layout
 st.title('Stock Prediction and Trading App')
@@ -113,14 +114,25 @@ st.subheader('Backtest Results')
 stats = portfolio.stats()
 st.write(stats)
 
-# Plotting the portfolio
-try:
-    # Use 'total_return' as an example; you may choose any other metric as needed
-    fig = portfolio.plot(column='total_return', plot_trades=True)  # Specify the column you want to plot
-    st.pyplot(fig)
-except Exception as e:
-    st.error(f"Error while plotting portfolio: {e}")
+# Prepare data for Plotly
+fig = go.Figure()
 
+# Add total return trace
+fig.add_trace(go.Scatter(x=portfolio.index, y=portfolio.total_return(), mode='lines', name='Total Return'))
+
+# Add other metrics as needed, e.g., drawdown
+fig.add_trace(go.Scatter(x=portfolio.index, y=portfolio.drawdown(), mode='lines', name='Drawdown'))
+
+# Update layout
+fig.update_layout(
+    title=f"{symbol} Portfolio Performance",
+    xaxis_title="Date",
+    yaxis_title="Value",
+    legend_title="Metrics"
+)
+
+# Show plot
+st.plotly_chart(fig)
 
 # Alpaca API credentials
 ALPACA_API_KEY = st.secrets["ALPACA_API_KEY"]

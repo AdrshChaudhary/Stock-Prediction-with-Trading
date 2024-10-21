@@ -8,3 +8,4 @@ matplotlib
 alpaca-trade-api
 numpy
 vectorbt
+plotly
