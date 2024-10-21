@@ -100,6 +100,7 @@ st.pyplot(plt)
 
 # Create a signal to buy if the model predicts an increase
 signals = best_rf.predict(X) > X['Close'].values
+st.write("Signals for buying (True) or not (False):", signals)
 
 # Backtest with vectorbt
 portfolio = vbt.Portfolio.from_signals(
@@ -117,24 +118,29 @@ st.write(stats)
 # Prepare data for Plotly
 fig = go.Figure()
 
+# Get total return and drawdown
+total_return = portfolio.total_return()
+drawdown = portfolio.drawdown()
+
+# Check if total_return and drawdown are valid Series and not empty
 if not total_return.empty:
     # Add total return trace
-    fig.add_trace(go.Scatter(x=portfolio.index, y=total_return, mode='lines', name='Total Return'))
+    fig.add_trace(go.Scatter(x=total_return.index, y=total_return.values, mode='lines', name='Total Return'))
 
+if not drawdown.empty:
     # Add drawdown trace
-    drawdown = portfolio.drawdown()
-    if not drawdown.empty:
-        fig.add_trace(go.Scatter(x=portfolio.index, y=drawdown, mode='lines', name='Drawdown'))
+    fig.add_trace(go.Scatter(x=drawdown.index, y=drawdown.values, mode='lines', name='Drawdown'))
 
-    # Update layout
-    fig.update_layout(
-        title=f"{symbol} Portfolio Performance",
-        xaxis_title="Date",
-        yaxis_title="Value",
-        legend_title="Metrics"
-    )
+# Update layout
+fig.update_layout(
+    title=f"{symbol} Portfolio Performance",
+    xaxis_title="Date",
+    yaxis_title="Value",
+    legend_title="Metrics"
+)
 
-    # Show plot
+# Show plot
+if fig.data:  # Check if any traces are added
     st.plotly_chart(fig)
 else:
     st.write("No data available for plotting.")
