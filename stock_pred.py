@@ -11,7 +11,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 import vectorbt as vbt
 import matplotlib.pyplot as plt
-from alpaca_trade_api.rest import REST, TimeFrame
+from alpaca_trade_api.rest import REST
 
 # Streamlit App Layout
 st.title('Stock Prediction and Trading App')
@@ -23,7 +23,7 @@ end_date = st.date_input("End Date:", pd.to_datetime('2024-01-01'))
 trade_quantity = st.number_input("Trade Quantity:", value=1, min_value=1)
 
 # Download stock data
-@st.cache
+@st.cache_data
 def load_data(symbol, start_date, end_date):
     stock_data = yf.download(symbol, start=start_date, end=end_date)
     return stock_data
@@ -98,7 +98,7 @@ plt.grid(True)
 st.pyplot(plt)
 
 # Create a signal to buy if the model predicts an increase
-signals = best_rf.predict(X) > X['Close']
+signals = best_rf.predict(X) > X['Close'].values
 
 # Backtest with vectorbt
 portfolio = vbt.Portfolio.from_signals(
@@ -111,7 +111,8 @@ portfolio = vbt.Portfolio.from_signals(
 # Display backtest results
 st.subheader('Backtest Results')
 st.write(portfolio.stats())
-portfolio.plot().show()
+fig = portfolio.plot()
+st.pyplot(fig)
 
 # Alpaca API credentials
 ALPACA_API_KEY = st.secrets["ALPACA_API_KEY"]
