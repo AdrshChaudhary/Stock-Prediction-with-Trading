@@ -127,9 +127,8 @@ alpaca = REST(ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL, api_version='v
 def trade(symbol, prediction, current_price):
     try:
         # Get the last predicted value
-        last_prediction_value = prediction.item()  # This extracts the scalar value from the Series
         
-        if last_prediction_value > current_price:
+        if prediction > current_price:
             # Buy signal
             alpaca.submit_order(
                 symbol=symbol,
