@@ -113,29 +113,17 @@ st.subheader('Backtest Results')
 stats = portfolio.stats()
 st.write(stats)
 
-# Prepare data for Plotly
-fig = go.Figure()
+# Display backtest results
+st.subheader('Backtest Results')
+stats = portfolio.stats()
+st.write(stats)
 
-# Total portfolio value
-total_value = portfolio.total_value()
+# Portfolio Plot using vectorbt
+st.subheader('Portfolio Performance')
+fig = portfolio.plot()
 
-# Add total portfolio value trace
-fig.add_trace(go.Scatter(x=total_value.index, y=total_value, mode='lines', name='Total Portfolio Value'))
-
-# Add drawdown trace
-drawdown = portfolio.drawdown()
-fig.add_trace(go.Scatter(x=drawdown.index, y=drawdown, mode='lines', name='Drawdown'))
-
-# Update layout
-fig.update_layout(
-    title=f"{symbol} Portfolio Performance",
-    xaxis_title="Date",
-    yaxis_title="Value",
-    legend_title="Metrics"
-)
-
-# Show plot
-st.plotly_chart(fig)
+# If you are using a Matplotlib plot
+st.pyplot(fig)  # This will display the Matplotlib figure in Streamlit
 
 
 # Alpaca API credentials
