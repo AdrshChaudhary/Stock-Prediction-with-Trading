@@ -1,0 +1,5 @@
+streamlit
+alpaca-trade-api
+scikit-learn
+joblib
+pandas
