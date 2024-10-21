@@ -117,24 +117,28 @@ st.write(stats)
 # Prepare data for Plotly
 fig = go.Figure()
 
-# Add total return trace
-total_return = portfolio.total_return()  # Get total return
-fig.add_trace(go.Scatter(x=total_return.index, y=total_return, mode='lines', name='Total Return'))
+if not total_return.empty:
+    # Add total return trace
+    fig.add_trace(go.Scatter(x=portfolio.index, y=total_return, mode='lines', name='Total Return'))
 
-# Add drawdown trace
-drawdown = portfolio.drawdown()  # Get drawdown
-fig.add_trace(go.Scatter(x=drawdown.index, y=drawdown, mode='lines', name='Drawdown'))
+    # Add drawdown trace
+    drawdown = portfolio.drawdown()
+    if not drawdown.empty:
+        fig.add_trace(go.Scatter(x=portfolio.index, y=drawdown, mode='lines', name='Drawdown'))
 
-# Update layout
-fig.update_layout(
-    title=f"{symbol} Portfolio Performance",
-    xaxis_title="Date",
-    yaxis_title="Value",
-    legend_title="Metrics"
-)
+    # Update layout
+    fig.update_layout(
+        title=f"{symbol} Portfolio Performance",
+        xaxis_title="Date",
+        yaxis_title="Value",
+        legend_title="Metrics"
+    )
 
-# Show plot
-st.plotly_chart(fig)
+    # Show plot
+    st.plotly_chart(fig)
+else:
+    st.write("No data available for plotting.")
+
 
 # Alpaca API credentials
 ALPACA_API_KEY = st.secrets["ALPACA_API_KEY"]
