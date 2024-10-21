@@ -167,11 +167,12 @@ class TradingApp:
             fees=0.001
         )
         
-        # Calculate metrics manually from portfolio results
-        total_return = (portfolio.final_value - portfolio.init_cash) / portfolio.init_cash
+        # Calculate metrics by calling the methods
+        total_return = (portfolio.final_value() - portfolio.init_cash) / portfolio.init_cash
         sharpe_ratio = portfolio.sharpe_ratio()
         max_drawdown = portfolio.max_drawdown()
-        total_trades = len(portfolio.trades)
+        trades = portfolio.trades.records_readable
+        total_trades = len(trades) if trades is not None else 0
         
         # Display metrics
         col1, col2, col3, col4 = st.columns(4)
@@ -183,6 +184,27 @@ class TradingApp:
             st.metric("Max Drawdown", f"{max_drawdown:.2%}")
         with col4:
             st.metric("Total Trades", f"{total_trades}")
+        
+        # Plot cumulative returns
+        cumulative_returns = portfolio.returns().cumsum()
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=cumulative_returns.index,
+            y=cumulative_returns.values,
+            mode='lines',
+            name='Cumulative Returns',
+            line=dict(color='blue', width=2)
+        ))
+        
+        fig.update_layout(
+            title='Portfolio Cumulative Returns',
+            xaxis_title='Date',
+            yaxis_title='Cumulative Return',
+            template='plotly_white',
+            showlegend=True
+        )
+        
+        st.plotly_chart(fig)
             
         return portfolio
     
