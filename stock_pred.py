@@ -110,9 +110,17 @@ portfolio = vbt.Portfolio.from_signals(
 
 # Display backtest results
 st.subheader('Backtest Results')
-st.write(portfolio.stats())
-fig = portfolio.plot()
-st.pyplot(fig)
+stats = portfolio.stats()
+st.write(stats)
+
+# Plotting the portfolio
+try:
+    # Use 'total_return' as an example; you may choose any other metric as needed
+    fig = portfolio.plot(column='total_return', plot_trades=True)  # Specify the column you want to plot
+    st.pyplot(fig)
+except Exception as e:
+    st.error(f"Error while plotting portfolio: {e}")
+
 
 # Alpaca API credentials
 ALPACA_API_KEY = st.secrets["ALPACA_API_KEY"]
