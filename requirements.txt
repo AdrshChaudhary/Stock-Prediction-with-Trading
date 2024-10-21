@@ -1,7 +1,9 @@
 streamlit
-alpaca-trade-api
-scikit-learn
-joblib
-pandas
 yfinance
+joblib
+numpy
+pandas
+scikit-learn
 vectorbt
+matplotlib
+alpaca-trade-api
