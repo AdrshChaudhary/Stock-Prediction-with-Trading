@@ -1,5 +1,6 @@
 # Ignore virtual environment directory
 myenv/
+.streamlit/secrets.toml
 
 # Ignore Python bytecode files
 *.pyc
