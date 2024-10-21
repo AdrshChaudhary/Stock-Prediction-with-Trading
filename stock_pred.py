@@ -118,10 +118,12 @@ st.write(stats)
 fig = go.Figure()
 
 # Add total return trace
-fig.add_trace(go.Scatter(x=portfolio.total_return.index, y=portfolio.total_return(), mode='lines', name='Total Return'))
+total_return = portfolio.total_return()  # Get total return
+fig.add_trace(go.Scatter(x=total_return.index, y=total_return, mode='lines', name='Total Return'))
 
 # Add drawdown trace
-fig.add_trace(go.Scatter(x=portfolio.drawdown.index, y=portfolio.drawdown(), mode='lines', name='Drawdown'))
+drawdown = portfolio.drawdown()  # Get drawdown
+fig.add_trace(go.Scatter(x=drawdown.index, y=drawdown, mode='lines', name='Drawdown'))
 
 # Update layout
 fig.update_layout(
