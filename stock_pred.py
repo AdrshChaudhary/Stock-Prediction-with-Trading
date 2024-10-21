@@ -198,23 +198,22 @@ class TradingApp:
             if backtest_df.empty:
                 st.error("No valid signals for backtesting.")
                 return None
-            
+
             # Ensure signals are boolean
-            entry_signals = backtest_df['Signal'].astype(bool)
-            exit_signals = ~entry_signals  # Inverse of entry signals
-            
+            backtest_df['Signal'] = backtest_df['Signal'].astype(bool)
+
             # Initialize portfolio with proper parameters
             portfolio = vbt.Portfolio.from_signals(
-                close=backtest_df['Close'],
-                entries=entry_signals,
-                exits=exit_signals,
+                close=backtest_df['Close'].values,  # Ensure 1-dimensional array
+                entries=backtest_df['Signal'].values,  # Ensure 1-dimensional array
+                exits=~backtest_df['Signal'].values,  # Inverse of entry signals
                 freq='1D',  # Explicitly set frequency
                 init_cash=10000,
                 fees=0.001,
                 sl_stop=0.15,  # Add stop loss at 15%
                 tp_stop=0.30   # Add take profit at 30%
             )
-            
+
             # Calculate metrics with safe error handling
             metrics = {}
             
@@ -254,7 +253,7 @@ class TradingApp:
             # Display metrics
             for key, value in metrics.items():
                 st.write(f"{key.replace('_', ' ').title()}: {value:.2f}")
-            
+
             return portfolio
         except Exception as e:
             st.error(f"Error running backtest: {str(e)}")
@@ -264,9 +263,9 @@ class TradingApp:
         """Execute trades using the Alpaca API."""
         try:
             # Check Alpaca keys
-            ALPACA_API_KEY = st.secrets['alpaca_api_key']
-            ALPACA_SECRET_KEY = st.secrets['alpaca_secret_key']
-            ALPACA_BASE_URL = st.secrets['alpaca_base_url']
+            ALPACA_API_KEY = st.secrets['ALPACA_API_KEY']
+            ALPACA_SECRET_KEY = st.secrets['ALPACA_SECRET_KEY']
+            ALPACA_BASE_URL = 'https://paper-api.alpaca.markets'
             
             if not all([ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL]):
                 st.error("Alpaca API keys not configured.")
