@@ -112,7 +112,6 @@ try:
     st.subheader('Backtest Results')
     stats = portfolio.stats()
 
-    # Check if the stats contain the keys before accessing
     total_return = stats['total_return'] if 'total_return' in stats else None
     sharpe_ratio = stats['sharpe'] if 'sharpe' in stats else None
     max_drawdown = stats['max_drawdown'] if 'max_drawdown' in stats else None
@@ -125,7 +124,7 @@ try:
 
     # Portfolio Plot using vectorbt
     st.subheader('Portfolio Performance')
-    st.plotly_chart(portfolio.total_return.vbt.plot())  # Corrected plotting method
+    st.plotly_chart(portfolio.total_return.plot())  # Corrected to use the proper plot method
 except Exception as e:
     st.error(f"Error running backtest: {str(e)}")
 
@@ -140,7 +139,7 @@ alpaca = REST(ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL, api_version='v
 # Define the trading function
 def trade(symbol, prediction, current_price):
     try:
-        if prediction > current_price.item():  # Ensure comparison with a scalar
+        if prediction > current_price:  # Comparison with a scalar
             # Buy signal
             alpaca.submit_order(
                 symbol=symbol,
@@ -161,7 +160,7 @@ def trade(symbol, prediction, current_price):
             )
             return f"Selling {symbol} at {current_price:.2f}"
     except Exception as e:
-        return f"Error executing trade: {e}"
+        return f"Error executing trade: {str(e)}"
 
 # Example usage with the last predicted value
 if st.button('Execute Trade'):
