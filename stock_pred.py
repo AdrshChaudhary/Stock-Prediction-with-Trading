@@ -327,7 +327,7 @@ def run_backtest(self, data, signals):
             
         except Exception as e:
             return f"Error executing trade: {str(e)}"
-    
+
     def run(self):
         """Main application logic."""
         try:
