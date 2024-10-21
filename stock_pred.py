@@ -167,17 +167,22 @@ class TradingApp:
             fees=0.001
         )
         
-        stats = portfolio.stats()
+        # Calculate metrics manually from portfolio results
+        total_return = (portfolio.final_value - portfolio.init_cash) / portfolio.init_cash
+        sharpe_ratio = portfolio.sharpe_ratio()
+        max_drawdown = portfolio.max_drawdown()
+        total_trades = len(portfolio.trades)
         
+        # Display metrics
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Total Return", f"{stats['total_return']:.2%}")
+            st.metric("Total Return", f"{total_return:.2%}")
         with col2:
-            st.metric("Sharpe Ratio", f"{stats['sharpe_ratio']:.2f}")
+            st.metric("Sharpe Ratio", f"{sharpe_ratio:.2f}")
         with col3:
-            st.metric("Max Drawdown", f"{stats['max_drawdown']:.2%}")
+            st.metric("Max Drawdown", f"{max_drawdown:.2%}")
         with col4:
-            st.metric("Total Trades", f"{stats['total_trades']}")
+            st.metric("Total Trades", f"{total_trades}")
             
         return portfolio
     
