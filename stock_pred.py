@@ -14,6 +14,17 @@ from alpaca_trade_api.rest import REST
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
+@st.cache_data
+def load_stock_data(_symbol: str, _start_date: str, _end_date: str):
+    """Load and cache stock data using string dates."""
+    try:
+        data = yf.download(_symbol, start=_start_date, end=_end_date)
+        if data.empty:
+            return None
+        return data
+    except Exception as e:
+        return None
+
 class StockPredictor:
     def __init__(self):
         self.model = None
@@ -74,23 +85,12 @@ class TradingApp:
                 value=1, 
                 min_value=1
             )
-
-    @st.cache_data
-    def load_stock_data(symbol: str, start_date_str: str, end_date_str: str):
-        """Load and cache stock data using string dates."""
-        try:
-            data = yf.download(symbol, start=start_date_str, end=end_date_str)
-            if data.empty:
-                return None
-            return data
-        except Exception as e:
-            return None
     
     def load_data(self, symbol, start_date, end_date):
         """Wrapper for loading data that handles date conversion."""
         start_date_str = start_date.strftime('%Y-%m-%d')
         end_date_str = end_date.strftime('%Y-%m-%d')
-        return self.load_stock_data(symbol, start_date_str, end_date_str)
+        return load_stock_data(symbol, start_date_str, end_date_str)
     
     def train_model(self, X, y):
         """Train and optimize the Random Forest model."""
@@ -209,6 +209,10 @@ class TradingApp:
         processed_data = self.predictor.prepare_features(data)
         processed_data.dropna(inplace=True)
         
+        if len(processed_data) < 200:  # Check if we have enough data
+            st.error("Not enough data for analysis. Please select a longer date range.")
+            return
+            
         # Create feature matrix
         X = processed_data[['Close', 'MA50', 'MA200', 'RSI', 'MACD', 'Volatility']]
         y = processed_data['Close'].shift(-1)  # Predict next day's close
