@@ -114,8 +114,8 @@ stats = portfolio.stats()
 st.write(stats)
 
 # Alpaca API credentials
-ALPACA_API_KEY = st.secrets["ALPACA_API_KEY"]
-ALPACA_SECRET_KEY = st.secrets["ALPACA_SECRET_KEY"]
+ALPACA_API_KEY = st.secrets["global"]["ALPACA_API_KEY"]
+ALPACA_SECRET_KEY = st.secrets["global"]["ALPACA_SECRET_KEY"]
 ALPACA_BASE_URL = 'https://paper-api.alpaca.markets'
 
 # Initialize Alpaca REST API
