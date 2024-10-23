@@ -97,7 +97,7 @@ plt.grid(True)
 st.pyplot(plt)
 
 # Create a signal to buy if the model predicts an increase
-signals = best_rf.predict(X) > X['Close']  # Convert to numpy array
+signals = best_rf.predict(X).flatten() > X['Close'].values  # Convert to numpy array
 
 # Backtest with vectorbt
 try:
