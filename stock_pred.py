@@ -97,15 +97,15 @@ plt.grid(True)
 st.pyplot(plt)
 
 # Create a signal to buy if the model predicts an increase
-signals = best_rf.predict(X) > X['Close'].to_numpy()  # Convert to numpy array
+signals = best_rf.predict(X) > X['Close']  # Convert to numpy array
 
 # Backtest with vectorbt
 try:
     portfolio = vbt.Portfolio.from_signals(
-        close=stock_data['Close'].to_numpy(),  # Ensure 1D array
+        close=stock_data['Close'],  # Ensure 1D array
         entries=signals,
         exits=~signals,
-        freq='1D'
+        freq='D'
     )
 
     # Display backtest results
@@ -123,8 +123,9 @@ try:
     st.write("Total Trades: {}".format(total_trades if total_trades is not None else 0))
 
     # Portfolio Plot using vectorbt
+    plot = portfolio.plot()
     st.subheader('Portfolio Performance')
-    st.plotly_chart(portfolio.total_return.plot())  # Corrected to use the proper plot method
+    st.pyplot(plot)  # Corrected to use the proper plot method
 except Exception as e:
     st.error(f"Error running backtest: {str(e)}")
 
@@ -143,7 +144,7 @@ def trade(symbol, prediction, current_price):
             # Buy signal
             alpaca.submit_order(
                 symbol=symbol,
-                qty=trade_quantity,
+                qty=1,
                 side='buy',
                 type='market',
                 time_in_force='day'
@@ -153,7 +154,7 @@ def trade(symbol, prediction, current_price):
             # Sell signal
             alpaca.submit_order(
                 symbol=symbol,
-                qty=trade_quantity,
+                qty=1,
                 side='sell',
                 type='market',
                 time_in_force='day'
