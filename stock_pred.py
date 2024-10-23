@@ -42,15 +42,16 @@ stock_data.dropna(inplace=True)
 
 # Visualization: Historical Prices with Moving Averages
 st.subheader('Historical Prices with Moving Averages')
-plt.figure(figsize=(14, 7))
-plt.plot(stock_data['Close'], label='Close Price', color='blue')
-plt.plot(stock_data['MA50'], label='50-Day MA', color='orange')
-plt.plot(stock_data['MA200'], label='200-Day MA', color='red')
-plt.title(f'{symbol} Stock Price with Moving Averages')
-plt.xlabel('Date')
-plt.ylabel('Price')
-plt.legend()
-st.pyplot(plt)
+fig, ax = plt.subplots(figsize=(14, 7))
+ax.plot(stock_data.index, stock_data['Close'], label='Close Price', color='blue')
+ax.plot(stock_data.index, stock_data['MA50'], label='50-Day MA', color='orange')
+ax.plot(stock_data.index, stock_data['MA200'], label='200-Day MA', color='red')
+ax.set_title(f'{symbol} Stock Price with Moving Averages')
+ax.set_xlabel('Date')
+ax.set_ylabel('Price')
+ax.legend()
+st.pyplot(fig)
+plt.close()
 
 # Define features and target
 X = stock_data[['Close', 'MA50', 'MA200']]
@@ -84,48 +85,59 @@ mse = mean_squared_error(y_test, predictions)
 st.write(f'Best Model Parameters: {grid_search.best_params_}')
 st.write(f'Mean Squared Error: {mse:.2f}')
 
-# Visualization: Actual vs. Predicted Prices (Scatter Plot)
+# Visualization: Actual vs. Predicted Prices
 st.subheader('Actual vs Predicted Prices')
-plt.figure(figsize=(14, 7))
-plt.scatter(y_test.index, y_test.values, label='Actual Prices', color='blue', alpha=0.6, edgecolor='k')
-plt.scatter(y_test.index, predictions, label='Predicted Prices', color='red', alpha=0.6, edgecolor='k')
-plt.title(f'Actual vs Predicted {symbol} Prices')
-plt.xlabel('Date')
-plt.ylabel('Price')
-plt.legend()
-plt.grid(True)
-st.pyplot(plt)
+fig, ax = plt.subplots(figsize=(14, 7))
+ax.scatter(y_test.index, y_test.values, label='Actual Prices', color='blue', alpha=0.6, edgecolor='k')
+ax.scatter(y_test.index, predictions, label='Predicted Prices', color='red', alpha=0.6, edgecolor='k')
+ax.set_title(f'Actual vs Predicted {symbol} Prices')
+ax.set_xlabel('Date')
+ax.set_ylabel('Price')
+ax.legend()
+ax.grid(True)
+st.pyplot(fig)
+plt.close()
 
-# Create a signal to buy if the model predicts an increase
-signals = best_rf.predict(X).flatten() > X['Close'].values  # Convert to numpy array
+# Create signals DataFrame
+signals_df = pd.DataFrame(index=stock_data.index)
+signals_df['Close'] = stock_data['Close']
+signals_df['Signal'] = (best_rf.predict(X) > X['Close']).astype(int)
 
 # Backtest with vectorbt
 try:
+    # Create portfolio with single column
     portfolio = vbt.Portfolio.from_signals(
-        close=stock_data['Close'],  # Ensure 1D array
-        entries=signals,
-        exits=~signals,
-        freq='D'
+        close=signals_df['Close'],
+        entries=signals_df['Signal'] == 1,
+        exits=signals_df['Signal'] == 0,
+        freq='D',
+        init_cash=10000,  # Initial investment amount
+        fees=0.001  # Commission rate
     )
 
     # Display backtest results
     st.subheader('Backtest Results')
-    stats = portfolio.stats()
+    
+    # Get portfolio stats
+    total_return = portfolio.total_return()
+    sharpe_ratio = portfolio.sharpe_ratio()
+    max_drawdown = portfolio.max_drawdown()
+    total_trades = portfolio.count_trades()
 
-    total_return = portfolio['total_return'].stats() if 'total_return' in stats else None
-    sharpe_ratio = portfolio['sharpe_ratio'].stats() if 'sharpe' in stats else None
-    max_drawdown = portfolio['max_drawdown'].stats() if 'max_drawdown' in stats else None
-    total_trades = portfolio['total_trades'].stats() if 'total_trades' in stats else None
+    st.write("Total Return: {:.2f}%".format(total_return * 100))
+    st.write("Sharpe Ratio: {:.2f}".format(sharpe_ratio))
+    st.write("Maximum Drawdown: {:.2f}%".format(max_drawdown * 100))
+    st.write("Total Trades: {}".format(total_trades))
 
-    st.write("Total Return: {:.2f}%".format(total_return * 100 if total_return is not None else 0))
-    st.write("Sharpe Ratio: {:.2f}".format(sharpe_ratio if sharpe_ratio is not None else 0))
-    st.write("Maximum Drawdown: {:.2f}%".format(max_drawdown * 100 if max_drawdown is not None else 0))
-    st.write("Total Trades: {}".format(total_trades if total_trades is not None else 0))
+    # Create custom portfolio visualization
+    fig, ax = plt.subplots(figsize=(14, 7))
+    portfolio.plot_cum_returns(ax=ax)
+    ax.set_title('Cumulative Returns')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Returns')
+    st.pyplot(fig)
+    plt.close()
 
-    # Portfolio Plot using vectorbt
-    plot = portfolio.plot()
-    st.subheader('Portfolio Performance')
-    st.pyplot(plot)  # Corrected to use the proper plot method
 except Exception as e:
     st.error(f"Error running backtest: {str(e)}")
 
@@ -138,34 +150,34 @@ ALPACA_BASE_URL = 'https://paper-api.alpaca.markets'
 alpaca = REST(ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL, api_version='v2')
 
 # Define the trading function
-def trade(symbol, prediction, current_price):
+def trade(symbol, prediction, current_price, quantity):
     try:
-        if prediction > current_price:  # Comparison with a scalar
+        if prediction > current_price:
             # Buy signal
             alpaca.submit_order(
                 symbol=symbol,
-                qty=1,
+                qty=quantity,
                 side='buy',
                 type='market',
                 time_in_force='day'
             )
-            return f"Buying {symbol} at {current_price:.2f}"
+            return f"Buying {quantity} shares of {symbol} at {current_price:.2f}"
         else:
             # Sell signal
             alpaca.submit_order(
                 symbol=symbol,
-                qty=1,
+                qty=quantity,
                 side='sell',
                 type='market',
                 time_in_force='day'
             )
-            return f"Selling {symbol} at {current_price:.2f}"
+            return f"Selling {quantity} shares of {symbol} at {current_price:.2f}"
     except Exception as e:
         return f"Error executing trade: {str(e)}"
 
-# Example usage with the last predicted value
+# Execute trade button
 if st.button('Execute Trade'):
     last_prediction = best_rf.predict([X.iloc[-1]])[0]
     last_price = X.iloc[-1]['Close']
-    result = trade(symbol, last_prediction, last_price)
+    result = trade(symbol, last_prediction, last_price, trade_quantity)
     st.write(result)
