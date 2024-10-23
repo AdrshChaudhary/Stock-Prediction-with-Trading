@@ -107,6 +107,10 @@ signals_df['Close'] = X['Close'].values
 signals_df['Predicted'] = all_predictions
 signals_df['Signal'] = (signals_df['Predicted'] > signals_df['Close']).astype(int)
 
+# Calculate number of trades
+trade_changes = signals_df['Signal'].diff().fillna(0)
+num_trades = (abs(trade_changes) > 0).sum()
+
 # Backtest with vectorbt
 try:
     # Create portfolio with single column
@@ -122,23 +126,40 @@ try:
     # Display backtest results
     st.subheader('Backtest Results')
     
-    # Get portfolio stats
+    # Calculate portfolio metrics
     total_return = portfolio.total_return()
     sharpe_ratio = portfolio.sharpe_ratio()
     max_drawdown = portfolio.max_drawdown()
-    total_trades = portfolio.count_trades()
 
+    # Display metrics
     st.write("Total Return: {:.2f}%".format(total_return * 100))
     st.write("Sharpe Ratio: {:.2f}".format(sharpe_ratio))
     st.write("Maximum Drawdown: {:.2f}%".format(max_drawdown * 100))
-    st.write("Total Trades: {}".format(total_trades))
+    st.write("Total Number of Trades: {}".format(num_trades))
+
+    # Additional portfolio metrics
+    if hasattr(portfolio, 'stats'):
+        stats = portfolio.stats()
+        st.write("\nDetailed Portfolio Statistics:")
+        for metric, value in stats.items():
+            if isinstance(value, (int, float)):
+                st.write(f"{metric}: {value:.2f}")
 
     # Create custom portfolio visualization
-    fig, ax = plt.subplots(figsize=(14, 7))
-    portfolio.plot_cum_returns(ax=ax)
-    ax.set_title('Cumulative Returns')
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Returns')
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12))
+    
+    # Plot cumulative returns
+    portfolio.plot_cum_returns(ax=ax1)
+    ax1.set_title('Cumulative Returns')
+    ax1.set_xlabel('Date')
+    ax1.set_ylabel('Returns')
+
+    # Plot drawdown
+    portfolio.plot_drawdown(ax=ax2)
+    ax2.set_title('Drawdown')
+    ax2.set_xlabel('Date')
+    ax2.set_ylabel('Drawdown')
+
     st.pyplot(fig)
     plt.close()
 
