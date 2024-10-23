@@ -98,10 +98,14 @@ ax.grid(True)
 st.pyplot(fig)
 plt.close()
 
-# Create signals DataFrame
-signals_df = pd.DataFrame(index=stock_data.index)
-signals_df['Close'] = stock_data['Close']
-signals_df['Signal'] = (best_rf.predict(X) > X['Close']).astype(int)
+# Generate predictions for the entire dataset
+all_predictions = best_rf.predict(X)
+
+# Create signals DataFrame with proper indexing
+signals_df = pd.DataFrame(index=X.index)
+signals_df['Close'] = X['Close'].values
+signals_df['Predicted'] = all_predictions
+signals_df['Signal'] = (signals_df['Predicted'] > signals_df['Close']).astype(int)
 
 # Backtest with vectorbt
 try:
