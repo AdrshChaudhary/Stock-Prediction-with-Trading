@@ -112,10 +112,10 @@ try:
     st.subheader('Backtest Results')
     stats = portfolio.stats()
 
-    total_return = stats['total_return'] if 'total_return' in stats else None
-    sharpe_ratio = stats['sharpe'] if 'sharpe' in stats else None
-    max_drawdown = stats['max_drawdown'] if 'max_drawdown' in stats else None
-    total_trades = stats['total_trades'] if 'total_trades' in stats else None
+    total_return = portfolio['total_return'].stats() if 'total_return' in stats else None
+    sharpe_ratio = portfolio['sharpe_ratio'].stats() if 'sharpe' in stats else None
+    max_drawdown = portfolio['max_drawdown'].stats() if 'max_drawdown' in stats else None
+    total_trades = portfolio['total_trades'].stats() if 'total_trades' in stats else None
 
     st.write("Total Return: {:.2f}%".format(total_return * 100 if total_return is not None else 0))
     st.write("Sharpe Ratio: {:.2f}".format(sharpe_ratio if sharpe_ratio is not None else 0))
